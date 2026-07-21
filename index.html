@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>FLUX</title>
+<style>
+  :root{
+    --bg: #0a0a0c;
+    --bg-elev: #131316;
+    --gold: #c9a15a;
+    --gold-soft: rgba(201,161,90,0.35);
+    --teal: #2a9d8f;
+    --teal-soft: rgba(42,157,143,0.30);
+    --text: #ece7dd;
+    --text-dim: #8a8780;
+    --ring-size: 3px;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow-x: hidden;
+  }
+  body::before{
+    content:"";
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse at 15% 0%, rgba(201,161,90,0.06), transparent 45%),
+      radial-gradient(ellipse at 85% 100%, rgba(42,157,143,0.07), transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  header{
+    position: relative;
+    z-index: 1;
+    padding: 44px 20px 28px;
+    text-align: center;
+  }
+  header .mark{
+    display:inline-flex;
+    align-items:center;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+  header .mark::before, header .mark::after{
+    content:"";
+    width: 24px; height:1px;
+    background: linear-gradient(90deg, transparent, var(--gold-soft));
+  }
+  header .mark::after{ background: linear-gradient(90deg, var(--gold-soft), transparent); }
+  h1{
+    margin: 14px 0 6px;
+    font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+    font-weight: 600;
+    font-size: clamp(2.4rem, 8vw, 3.6rem);
+    letter-spacing: 0.06em;
+    background: linear-gradient(120deg, var(--gold) 0%, #f1d9a8 35%, var(--teal) 75%, #4fc2b3 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  header p{
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+  header p span{ color: var(--gold); }
+
+  main{ position: relative; z-index: 1; max-width: 1200px; margin: 0 auto; padding: 8px 16px 40px; }
+
+  .grid{
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 18px 14px;
+    min-height: 40vh;
+  }
+  @media (min-width: 700px){
+    .grid{ grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 26px 20px; }
+  }
+
+  .card{
+    display:flex; flex-direction:column; align-items:center;
+    animation: rise 0.42s ease both;
+  }
+  @keyframes rise{
+    from{ opacity:0; transform: translateY(8px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+
+  .avatar{
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    cursor: pointer;
+    padding: var(--ring-size);
+    background: conic-gradient(from 200deg, var(--gold) 0%, rgba(201,161,90,0.15) 22%, var(--teal) 50%, rgba(42,157,143,0.15) 72%, var(--gold) 100%);
+    transition: transform 0.25s ease, filter 0.25s ease;
+  }
+  .avatar:active{ transform: scale(0.94); }
+  @media (hover:hover){
+    .avatar:hover{ transform: scale(1.045); filter: brightness(1.08); }
+  }
+  .avatar-inner{
+    width:100%; height:100%;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--bg-elev);
+    position: relative;
+  }
+  .avatar-inner img{
+    width:100%; height:100%;
+    object-fit: cover;
+    display:block;
+    opacity:0;
+    transition: opacity 0.35s ease;
+  }
+  .avatar-inner img.loaded{ opacity:1; }
+  .avatar-inner .skel{
+    position:absolute; inset:0;
+    background: linear-gradient(110deg, #16161a 8%, #1f1f24 18%, #16161a 33%);
+    background-size: 200% 100%;
+    animation: shimmer 1.3s linear infinite;
+  }
+  .avatar-inner .skel.gone{ display:none; }
+  @keyframes shimmer{
+    from{ background-position: 200% 0; }
+    to{ background-position: -200% 0; }
+  }
+
+  /* pagination */
+  .pager{
+    position: relative; z-index:1;
+    display:flex; flex-wrap: wrap;
+    justify-content:center; align-items:center;
+    gap: 6px;
+    padding: 30px 10px 46px;
+  }
+  .pager button{
+    min-width: 34px; height: 34px;
+    padding: 0 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .pager button:hover:not(:disabled){ border-color: var(--gold-soft); color: var(--text); }
+  .pager button:disabled{ opacity: 0.3; cursor: default; }
+  .pager button.active{
+    background: linear-gradient(135deg, var(--gold), var(--teal));
+    color: #0a0a0c;
+    font-weight: 600;
+    border-color: transparent;
+  }
+  .pager .dots{ color: var(--text-dim); padding: 0 2px; font-size: 13px; user-select:none; }
+
+  .status{
+    position: relative; z-index:1;
+    text-align:center;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding-bottom: 6px;
+  }
+
+  /* lightbox */
+  .lightbox{
+    position: fixed; inset:0;
+    background: rgba(6,6,8,0.97);
+    backdrop-filter: blur(6px);
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; pointer-events:none;
+    transition: opacity 0.25s ease;
+    z-index: 50;
+    touch-action: none;
+  }
+  .lightbox.open{ opacity:1; pointer-events:auto; }
+  .lightbox img{
+    max-width: 92vw; max-height: 86vh;
+    object-fit: contain;
+    border-radius: 4px;
+    box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+    opacity:0;
+    transform: scale(0.97);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .lightbox img.shown{ opacity:1; transform: scale(1); }
+  .lightbox .spinner{
+    position:absolute;
+    width: 30px; height:30px;
+    border-radius:50%;
+    border: 2px solid rgba(255,255,255,0.15);
+    border-top-color: var(--gold);
+    animation: spin 0.8s linear infinite;
+  }
+  .spinner.gone{ display:none; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .lb-btn{
+    position: absolute;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text);
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background 0.2s ease;
+  }
+  .lb-btn:hover{ background: rgba(255,255,255,0.14); }
+  .lb-close{ top: 18px; right: 18px; }
+  .lb-prev{ left: 14px; top: 50%; transform: translateY(-50%); }
+  .lb-next{ right: 14px; top: 50%; transform: translateY(-50%); }
+  @media (max-width: 640px){
+    .lb-prev, .lb-next{ width:36px; height:36px; font-size:15px; }
+  }
+  .lb-index{
+    position:absolute; bottom: 20px; left:50%; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: 0.08em; color: var(--text-dim);
+  }
+
+  ::selection{ background: var(--gold-soft); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="mark">Personal Archive</div>
+  <h1>FLUX</h1>
+  <p><span id="countLabel">0</span> profiles &middot; page <span id="pageLabel">1</span> of <span id="totalPagesLabel">1</span></p>
+</header>
+
+<main>
+  <div class="grid" id="grid"></div>
+</main>
+
+<div class="status" id="status"></div>
+<nav class="pager" id="pager"></nav>
+
+<div class="lightbox" id="lightbox">
+  <button class="lb-btn lb-close" id="lbClose" aria-label="Close">&times;</button>
+  <button class="lb-btn lb-prev" id="lbPrev" aria-label="Previous">&#8249;</button>
+  <div class="spinner" id="lbSpinner"></div>
+  <img id="lbImg" alt="Profile photo">
+  <button class="lb-btn lb-next" id="lbNext" aria-label="Next">&#8250;</button>
+  <div class="lb-index" id="lbIndex"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     CONFIG — edit these two values to update the gallery
+     ============================================================ */
+  var CONFIG = {
+    // Base folder on GitHub (the /blob/ URL is auto-converted to raw.githubusercontent.com)
+    repoBase: "https://github.com/InfiniteProfile/Flux/blob/main/",
+    // Ordered filename list. Entries are flat profile images (no header grouping in this set).
+    filenames: ["045e440c9c83ca9d1566352d58a2fd55.png", "20260719_135831.jpg", "20b9b703cf30015911b8e8c60d23aedb.png", "26446db84b0c84a0337f7715e07d00b7.png", "466d85a7a8b0a4117358e0a587145a23.png", "4c816aa8ff971fe0d57d3e78f523d866.png", "64f3bbfd6975de4fdba56b34d634b5bb.png", "87530587e9fcc537c74f48a70d8a1393.png", "FB_IMG_1784135744171.jpg", "FB_IMG_1784136331838.jpg", "FB_IMG_1784136337361.jpg", "FB_IMG_1784136346288.jpg", "FB_IMG_1784136372208.jpg", "FB_IMG_1784136376817.jpg", "FB_IMG_1784136379704.jpg", "FB_IMG_1784136384402.jpg", "FB_IMG_1784137917591.jpg", "FB_IMG_1784137920041.jpg", "FB_IMG_1784137928279.jpg", "FB_IMG_1784137929999.jpg", "FB_IMG_1784137940137.jpg", "FB_IMG_1784137941479.jpg", "FB_IMG_1784137943694.jpg", "FB_IMG_1784137945006.jpg", "FB_IMG_1784137975915.jpg", "FB_IMG_1784138069683.jpg", "FB_IMG_1784138958897.jpg", "FB_IMG_1784138973039.jpg", "FB_IMG_1784138975105.jpg", "FB_IMG_1784138977012.jpg", "FB_IMG_1784138979539.jpg", "FB_IMG_1784138982056.jpg", "FB_IMG_1784138983589.jpg", "FB_IMG_1784138985676.jpg", "FB_IMG_1784138997463.jpg", "FB_IMG_1784138998699.jpg", "FB_IMG_1784139000912.jpg", "FB_IMG_1784139002223.jpg", "FB_IMG_1784139010377.jpg", "FB_IMG_1784139013951.jpg", "FB_IMG_1784139018727.jpg", "FB_IMG_1784152815946.jpg", "FB_IMG_1784152818352.jpg", "FB_IMG_1784152820419.jpg", "FB_IMG_1784152835269.jpg", "FB_IMG_1784152838118.jpg", "FB_IMG_1784152840770.jpg", "FB_IMG_1784152842701.jpg", "FB_IMG_1784152844640.jpg", "FB_IMG_1784152848040.jpg", "FB_IMG_1784152849969.jpg", "FB_IMG_1784152851982.jpg", "FB_IMG_1784152853896.jpg", "FB_IMG_1784152856190.jpg", "FB_IMG_1784152858746.jpg", "FB_IMG_1784152860609.jpg", "FB_IMG_1784152862752.jpg", "FB_IMG_1784152864946.jpg", "FB_IMG_1784152869348.jpg", "FB_IMG_1784152873320.jpg", "FB_IMG_1784152875474.jpg", "FB_IMG_1784152878251.jpg", "FB_IMG_1784152881763.jpg", "FB_IMG_1784152882994.jpg", "FB_IMG_1784152885314.jpg", "FB_IMG_1784152888552.jpg", "FB_IMG_1784152889222.jpg", "FB_IMG_1784152891668.jpg", "FB_IMG_1784152897868.jpg", "FB_IMG_1784152899979.jpg", "FB_IMG_1784152902553.jpg", "FB_IMG_1784152904869.jpg", "FB_IMG_1784152907119.jpg", "FB_IMG_1784152908522.jpg", "FB_IMG_1784152910918.jpg", "FB_IMG_1784152912563.jpg", "FB_IMG_1784152914532.jpg", "FB_IMG_1784152917667.jpg", "FB_IMG_1784152919578.jpg", "FB_IMG_1784152921765.jpg", "FB_IMG_1784152923684.jpg", "FB_IMG_1784152925340.jpg", "FB_IMG_1784152929950.jpg", "FB_IMG_1784152931908.jpg", "FB_IMG_1784152934695.jpg", "FB_IMG_1784152936161.jpg", "FB_IMG_1784152937138.jpg", "FB_IMG_1784152940603.jpg", "FB_IMG_1784152943776.jpg", "FB_IMG_1784152946861.jpg", "FB_IMG_1784152948156.jpg", "FB_IMG_1784152949674.jpg", "FB_IMG_1784152951580.jpg", "FB_IMG_1784152953211.jpg", "FB_IMG_1784154379191.jpg", "FB_IMG_1784154474939.jpg", "FB_IMG_1784154477135.jpg", "FB_IMG_1784154479278.jpg", "FB_IMG_1784154481477.jpg", "FB_IMG_1784154489563.jpg", "FB_IMG_1784154491566.jpg", "FB_IMG_1784154493738.jpg", "FB_IMG_1784154564719.jpg", "FB_IMG_1784154566203.jpg", "FB_IMG_1784154567622.jpg", "FB_IMG_1784154568896.jpg", "FB_IMG_1784154570897.jpg", "FB_IMG_1784154572260.jpg", "FB_IMG_1784154573645.jpg", "FB_IMG_1784154575350.jpg", "FB_IMG_1784154577072.jpg", "FB_IMG_1784154579328.jpg", "FB_IMG_1784154580800.jpg", "FB_IMG_1784154582186.jpg", "FB_IMG_1784154583704.jpg", "FB_IMG_1784154584894.jpg", "FB_IMG_1784154586642.jpg", "FB_IMG_1784154587672.jpg", "FB_IMG_1784154596124.jpg", "FB_IMG_1784154599321.jpg", "FB_IMG_1784154724742.jpg", "FB_IMG_1784156778837.jpg", "FB_IMG_1784156785189.jpg", "FB_IMG_1784156795283.jpg", "FB_IMG_1784156799295.jpg", "FB_IMG_1784156840058.jpg", "FB_IMG_1784159352341.jpg", "FB_IMG_1784159357823.jpg", "FB_IMG_1784159365565.jpg", "FB_IMG_1784159371002.jpg", "FB_IMG_1784183008705.jpg", "FB_IMG_1784185344588.jpg", "FB_IMG_1784185350526.jpg", "FB_IMG_1784185401425.jpg", "FB_IMG_1784185403502.jpg", "FB_IMG_1784185408265.jpg", "FB_IMG_1784185409680.jpg", "FB_IMG_1784185417649.jpg", "FB_IMG_1784185422081.jpg", "FB_IMG_1784185467178.jpg", "FB_IMG_1784185469049.jpg", "FB_IMG_1784185470835.jpg", "FB_IMG_1784185472796.jpg", "FB_IMG_1784185474804.jpg", "FB_IMG_1784185476817.jpg", "FB_IMG_1784185478857.jpg", "FB_IMG_1784185482317.jpg", "FB_IMG_1784185485664.jpg", "FB_IMG_1784185485763.jpg", "FB_IMG_1784185487104.jpg", "FB_IMG_1784185491093.jpg", "FB_IMG_1784185493172.jpg", "FB_IMG_1784185499009.jpg", "FB_IMG_1784185500694.jpg", "FB_IMG_1784185502822.jpg", "FB_IMG_1784185505529.jpg", "FB_IMG_1784185511395.jpg", "FB_IMG_1784185517156.jpg", "FB_IMG_1784185517169.jpg", "FB_IMG_1784185522166.jpg", "FB_IMG_1784185522232.jpg", "FB_IMG_1784185522416.jpg", "FB_IMG_1784185524068.jpg", "FB_IMG_1784185526231.jpg", "FB_IMG_1784185529603.jpg", "FB_IMG_1784185530055.jpg", "FB_IMG_1784185531929.jpg", "FB_IMG_1784185534359.jpg", "FB_IMG_1784185536235.jpg", "FB_IMG_1784185538109.jpg", "FB_IMG_1784185540500.jpg", "FB_IMG_1784185542903.jpg", "FB_IMG_1784185544434.jpg", "FB_IMG_1784185546422.jpg", "FB_IMG_1784185550818.jpg", "FB_IMG_1784185553861.jpg", "FB_IMG_1784185553884.jpg", "FB_IMG_1784185555249.jpg", "FB_IMG_1784185556491.jpg", "FB_IMG_1784185558584.jpg", "FB_IMG_1784185560452.jpg", "FB_IMG_1784185562449.jpg", "FB_IMG_1784185564501.jpg", "FB_IMG_1784185566601.jpg", "FB_IMG_1784185571637.jpg", "FB_IMG_1784185573706.jpg", "FB_IMG_1784185575675.jpg", "FB_IMG_1784185577651.jpg", "FB_IMG_1784185579750.jpg", "FB_IMG_1784185581745.jpg", "FB_IMG_1784185584234.jpg", "FB_IMG_1784185585842.jpg", "FB_IMG_1784185587792.jpg", "FB_IMG_1784185589976.jpg", "FB_IMG_1784185591964.jpg", "FB_IMG_1784185593985.jpg", "FB_IMG_1784185596454.jpg", "FB_IMG_1784185598087.jpg", "FB_IMG_1784185600173.jpg", "FB_IMG_1784185602158.jpg", "FB_IMG_1784185604700.jpg", "FB_IMG_1784185607807.jpg", "FB_IMG_1784185609439.jpg", "FB_IMG_1784185610516.jpg", "FB_IMG_1784185612267.jpg", "FB_IMG_1784185614268.jpg", "FB_IMG_1784185617447.jpg", "FB_IMG_1784185618673.jpg", "FB_IMG_1784185620322.jpg", "FB_IMG_1784185622413.jpg", "FB_IMG_1784185624498.jpg", "FB_IMG_1784185626689.jpg", "FB_IMG_1784185629653.jpg", "FB_IMG_1784185630592.jpg", "FB_IMG_1784185632865.jpg", "FB_IMG_1784185634575.jpg", "FB_IMG_1784185636936.jpg", "FB_IMG_1784185638773.jpg", "FB_IMG_1784185640912.jpg", "FB_IMG_1784185643694.jpg", "FB_IMG_1784185649593.jpg", "FB_IMG_1784185650892.jpg", "FB_IMG_1784185652225.jpg", "FB_IMG_1784185653670.jpg", "FB_IMG_1784185680501.jpg", "FB_IMG_1784185682559.jpg", "FB_IMG_1784185685081.jpg", "FB_IMG_1784185686234.jpg", "FB_IMG_1784185688300.jpg", "FB_IMG_1784185690350.jpg", "FB_IMG_1784185692298.jpg", "FB_IMG_1784185694296.jpg", "FB_IMG_1784185700354.jpg", "FB_IMG_1784185700377.jpg", "FB_IMG_1784185700691.jpg", "FB_IMG_1784185705619.jpg", "FB_IMG_1784185707092.jpg", "FB_IMG_1784185707399.jpg", "FB_IMG_1784185709281.jpg", "FB_IMG_1784185711331.jpg", "FB_IMG_1784185714272.jpg", "FB_IMG_1784185717197.jpg", "FB_IMG_1784185718711.jpg", "FB_IMG_1784185720742.jpg", "FB_IMG_1784185722995.jpg", "FB_IMG_1784185725808.jpg", "FB_IMG_1784185730348.jpg", "FB_IMG_1784185731077.jpg", "FB_IMG_1784185735108.jpg", "FB_IMG_1784185736620.jpg", "FB_IMG_1784185741956.jpg", "FB_IMG_1784185742076.jpg", "FB_IMG_1784185742093.jpg", "FB_IMG_1784185744061.jpg", "FB_IMG_1784185745756.jpg", "FB_IMG_1784185747564.jpg", "FB_IMG_1784185749220.jpg", "FB_IMG_1784185751354.jpg", "FB_IMG_1784185753321.jpg", "FB_IMG_1784185755265.jpg", "FB_IMG_1784185757247.jpg", "FB_IMG_1784185759327.jpg", "FB_IMG_1784185761677.jpg", "FB_IMG_1784185763561.jpg", "FB_IMG_1784185765486.jpg", "FB_IMG_1784185767987.jpg", "FB_IMG_1784185769586.jpg", "FB_IMG_1784185771511.jpg", "FB_IMG_1784185773939.jpg", "FB_IMG_1784185775919.jpg", "FB_IMG_1784185777491.jpg", "FB_IMG_1784185779564.jpg", "FB_IMG_1784185781673.jpg", "FB_IMG_1784185783700.jpg", "FB_IMG_1784185785792.jpg", "FB_IMG_1784185787715.jpg", "FB_IMG_1784185790239.jpg", "FB_IMG_1784185791770.jpg", "FB_IMG_1784185794312.jpg", "FB_IMG_1784185795904.jpg", "FB_IMG_1784185797964.jpg", "FB_IMG_1784185799778.jpg", "FB_IMG_1784185801898.jpg", "FB_IMG_1784185803948.jpg", "FB_IMG_1784185806209.jpg", "FB_IMG_1784185808360.jpg", "FB_IMG_1784185810211.jpg", "FB_IMG_1784185812224.jpg", "FB_IMG_1784185814119.jpg", "FB_IMG_1784185816162.jpg", "FB_IMG_1784185818214.jpg", "FB_IMG_1784185820810.jpg", "FB_IMG_1784185822329.jpg", "FB_IMG_1784185824364.jpg", "FB_IMG_1784185826507.jpg", "FB_IMG_1784185828460.jpg", "FB_IMG_1784185830814.jpg", "FB_IMG_1784185832960.jpg", "FB_IMG_1784185835147.jpg", "FB_IMG_1784185836450.jpg", "FB_IMG_1784185838615.jpg", "FB_IMG_1784185840524.jpg", "FB_IMG_1784185842927.jpg", "FB_IMG_1784186510149.jpg", "FB_IMG_1784196900787.jpg", "FB_IMG_1784196986327.jpg", "FB_IMG_1784197035267.jpg", "FB_IMG_1784197038568.jpg", "FB_IMG_1784197046570.jpg", "FB_IMG_1784197061296.jpg", "FB_IMG_1784211033401.jpg", "FB_IMG_1784213916075.jpg", "FB_IMG_1784213920826.jpg", "FB_IMG_1784213924883.jpg", "FB_IMG_1784213933600.jpg", "FB_IMG_1784213945949.jpg", "FB_IMG_1784213961455.jpg", "FB_IMG_1784213966202.jpg", "FB_IMG_1784213972304.jpg", "FB_IMG_1784213974268.jpg", "FB_IMG_1784213976279.jpg", "FB_IMG_1784213978133.jpg", "FB_IMG_1784213980255.jpg", "FB_IMG_1784213982417.jpg", "FB_IMG_1784213984306.jpg", "FB_IMG_1784213986222.jpg", "FB_IMG_1784213989333.jpg", "FB_IMG_1784213991612.jpg", "FB_IMG_1784213994033.jpg", "FB_IMG_1784213996042.jpg", "FB_IMG_1784213997904.jpg", "FB_IMG_1784213999818.jpg", "FB_IMG_1784214001777.jpg", "FB_IMG_1784214003712.jpg", "FB_IMG_1784214005532.jpg", "FB_IMG_1784214019285.jpg", "FB_IMG_1784214024109.jpg", "FB_IMG_1784214029970.jpg", "FB_IMG_1784214034934.jpg", "FB_IMG_1784214041386.jpg", "FB_IMG_1784214046113.jpg", "FB_IMG_1784214048017.jpg", "FB_IMG_1784214050003.jpg", "FB_IMG_1784214052768.jpg", "FB_IMG_1784214054818.jpg", "FB_IMG_1784214057111.jpg", "FB_IMG_1784214059064.jpg", "FB_IMG_1784214061221.jpg", "FB_IMG_1784214063098.jpg", "FB_IMG_1784214065265.jpg", "FB_IMG_1784214066987.jpg", "FB_IMG_1784214069468.jpg", "FB_IMG_1784214071506.jpg", "FB_IMG_1784214073449.jpg", "FB_IMG_1784214080141.jpg", "FB_IMG_1784214119606.jpg", "FB_IMG_1784214121525.jpg", "FB_IMG_1784214123385.jpg", "FB_IMG_1784214128222.jpg", "FB_IMG_1784214131838.jpg", "FB_IMG_1784214151891.jpg", "FB_IMG_1784214156826.jpg", "FB_IMG_1784214177124.jpg", "FB_IMG_1784214189498.jpg", "FB_IMG_1784214195624.jpg", "FB_IMG_1784214197583.jpg", "FB_IMG_1784214199684.jpg", "FB_IMG_1784214207343.jpg", "FB_IMG_1784214232586.jpg", "FB_IMG_1784214236851.jpg", "FB_IMG_1784214240566.jpg", "FB_IMG_1784218786985.jpg", "FB_IMG_1784218801056.jpg", "FB_IMG_1784218804280.jpg", "FB_IMG_1784218806014.jpg", "FB_IMG_1784218809592.jpg", "FB_IMG_1784218812234.jpg", "FB_IMG_1784218813831.jpg", "FB_IMG_1784218818982.jpg", "FB_IMG_1784218820479.jpg", "FB_IMG_1784218822293.jpg", "FB_IMG_1784218824898.jpg", "FB_IMG_1784218826651.jpg", "FB_IMG_1784218828486.jpg", "FB_IMG_1784218830618.jpg", "FB_IMG_1784218832279.jpg", "FB_IMG_1784218836051.jpg", "FB_IMG_1784218837055.jpg", "FB_IMG_1784218838993.jpg", "FB_IMG_1784218840967.jpg", "FB_IMG_1784218842915.jpg", "FB_IMG_1784218845840.jpg", "FB_IMG_1784218849276.jpg", "FB_IMG_1784218851364.jpg", "FB_IMG_1784218853413.jpg", "FB_IMG_1784218855251.jpg", "FB_IMG_1784218859015.jpg", "FB_IMG_1784218863552.jpg", "FB_IMG_1784218869090.jpg", "FB_IMG_1784218871202.jpg", "FB_IMG_1784218874065.jpg", "FB_IMG_1784218876244.jpg", "FB_IMG_1784218878398.jpg", "FB_IMG_1784218883395.jpg", "FB_IMG_1784218884335.jpg", "FB_IMG_1784218888685.jpg", "FB_IMG_1784218891531.jpg", "FB_IMG_1784218895245.jpg", "FB_IMG_1784218899347.jpg", "FB_IMG_1784218901231.jpg", "FB_IMG_1784218904104.jpg", "FB_IMG_1784218906732.jpg", "FB_IMG_1784218910338.jpg", "FB_IMG_1784218911768.jpg", "FB_IMG_1784218914789.jpg", "FB_IMG_1784218916210.jpg", "FB_IMG_1784218920243.jpg", "FB_IMG_1784218922139.jpg", "FB_IMG_1784218924224.jpg", "FB_IMG_1784218926311.jpg", "FB_IMG_1784218929200.jpg", "FB_IMG_1784218933023.jpg", "FB_IMG_1784218935196.jpg", "FB_IMG_1784218937617.jpg", "FB_IMG_1784218942838.jpg", "FB_IMG_1784218944862.jpg", "FB_IMG_1784218946383.jpg", "FB_IMG_1784218956332.jpg", "FB_IMG_1784218957903.jpg", "FB_IMG_1784218960503.jpg", "FB_IMG_1784218962211.jpg", "FB_IMG_1784218963454.jpg", "FB_IMG_1784218965465.jpg", "FB_IMG_1784218969961.jpg", "FB_IMG_1784218971718.jpg", "FB_IMG_1784218974163.jpg", "FB_IMG_1784218975799.jpg", "FB_IMG_1784218981231.jpg", "FB_IMG_1784218982714.jpg", "FB_IMG_1784218984237.jpg", "FB_IMG_1784218986559.jpg", "FB_IMG_1784218988602.jpg", "FB_IMG_1784218990683.jpg", "FB_IMG_1784218992430.jpg", "FB_IMG_1784218997812.jpg", "FB_IMG_1784218999364.jpg", "FB_IMG_1784219002585.jpg", "FB_IMG_1784219004855.jpg", "FB_IMG_1784219006864.jpg", "FB_IMG_1784219014318.jpg", "FB_IMG_1784219016999.jpg", "FB_IMG_1784219021416.jpg", "FB_IMG_1784219033672.jpg", "FB_IMG_1784219037202.jpg", "FB_IMG_1784219038958.jpg", "FB_IMG_1784219046491.jpg", "FB_IMG_1784219048719.jpg", "FB_IMG_1784219051537.jpg", "FB_IMG_1784219053239.jpg", "FB_IMG_1784219055035.jpg", "FB_IMG_1784219057146.jpg", "FB_IMG_1784219058878.jpg", "FB_IMG_1784219060804.jpg", "FB_IMG_1784219064021.jpg", "FB_IMG_1784219066100.jpg", "FB_IMG_1784219068067.jpg", "FB_IMG_1784219071788.jpg", "FB_IMG_1784219073952.jpg", "FB_IMG_1784219075754.jpg", "FB_IMG_1784219078297.jpg", "FB_IMG_1784219080166.jpg", "FB_IMG_1784219082360.jpg", "FB_IMG_1784219084291.jpg", "FB_IMG_1784219086541.jpg", "FB_IMG_1784219089568.jpg", "FB_IMG_1784219092218.jpg", "FB_IMG_1784219094961.jpg", "FB_IMG_1784219095825.jpg", "FB_IMG_1784219111284.jpg", "FB_IMG_1784219120185.jpg", "FB_IMG_1784219129668.jpg", "FB_IMG_1784219133907.jpg", "FB_IMG_1784219137095.jpg", "FB_IMG_1784219138048.jpg", "FB_IMG_1784219140259.jpg", "FB_IMG_1784219142395.jpg", "FB_IMG_1784219144242.jpg", "FB_IMG_1784219146933.jpg", "FB_IMG_1784219148521.jpg", "FB_IMG_1784219150688.jpg", "FB_IMG_1784219152819.jpg", "FB_IMG_1784219154452.jpg", "FB_IMG_1784219156730.jpg", "FB_IMG_1784219160060.jpg", "FB_IMG_1784219161715.jpg", "FB_IMG_1784219163370.jpg", "FB_IMG_1784219165754.jpg", "FB_IMG_1784219167247.jpg", "FB_IMG_1784219170063.jpg", "FB_IMG_1784219171787.jpg", "FB_IMG_1784219173502.jpg", "FB_IMG_1784219175346.jpg", "FB_IMG_1784219177355.jpg", "FB_IMG_1784219179669.jpg", "FB_IMG_1784219185449.jpg", "FB_IMG_1784219187281.jpg", "FB_IMG_1784219196211.jpg", "FB_IMG_1784219198031.jpg", "FB_IMG_1784219200970.jpg", "FB_IMG_1784219206113.jpg", "FB_IMG_1784219208587.jpg", "FB_IMG_1784219211345.jpg", "FB_IMG_1784219214112.jpg", "FB_IMG_1784219215806.jpg", "FB_IMG_1784219219683.jpg", "FB_IMG_1784219223720.jpg", "FB_IMG_1784219225676.jpg", "FB_IMG_1784219241966.jpg", "FB_IMG_1784219245084.jpg", "FB_IMG_1784219245836.jpg", "FB_IMG_1784219248065.jpg", "FB_IMG_1784219250858.jpg", "FB_IMG_1784219251598.jpg", "FB_IMG_1784219254082.jpg", "FB_IMG_1784219263666.jpg", "FB_IMG_1784219265531.jpg", "FB_IMG_1784219268455.jpg", "FB_IMG_1784219270896.jpg", "FB_IMG_1784219272703.jpg", "FB_IMG_1784219274533.jpg", "FB_IMG_1784219276567.jpg", "FB_IMG_1784219278685.jpg", "FB_IMG_1784219281269.jpg", "FB_IMG_1784219282631.jpg", "FB_IMG_1784219287336.jpg", "FB_IMG_1784219288771.jpg", "FB_IMG_1784219291939.jpg", "FB_IMG_1784219292737.jpg", "FB_IMG_1784219294994.jpg", "FB_IMG_1784219296778.jpg", "FB_IMG_1784219299842.jpg", "FB_IMG_1784219305086.jpg", "FB_IMG_1784219307460.jpg", "FB_IMG_1784219311198.jpg", "FB_IMG_1784219315057.jpg", "FB_IMG_1784219318842.jpg", "FB_IMG_1784219321848.jpg", "FB_IMG_1784219323858.jpg", "FB_IMG_1784219326171.jpg", "FB_IMG_1784219330172.jpg", "FB_IMG_1784219333265.jpg", "FB_IMG_1784219335254.jpg", "FB_IMG_1784219337911.jpg", "FB_IMG_1784219347544.jpg", "FB_IMG_1784219350711.jpg", "FB_IMG_1784219375691.jpg", "FB_IMG_1784219377466.jpg", "FB_IMG_1784219382851.jpg", "FB_IMG_1784219385383.jpg", "FB_IMG_1784219387505.jpg", "FB_IMG_1784219397389.jpg", "FB_IMG_1784219399516.jpg", "FB_IMG_1784219403830.jpg", "FB_IMG_1784219408143.jpg", "FB_IMG_1784219409220.jpg", "FB_IMG_1784219416249.jpg", "FB_IMG_1784219418363.jpg", "FB_IMG_1784219420899.jpg", "FB_IMG_1784219441973.jpg", "FB_IMG_1784219445558.jpg", "FB_IMG_1784219448363.jpg", "FB_IMG_1784219478253.jpg", "FB_IMG_1784221744071.jpg", "FB_IMG_1784221752546.jpg", "FB_IMG_1784221778512.jpg", "FB_IMG_1784221782819.jpg", "FB_IMG_1784221792033.jpg", "FB_IMG_1784221796072.jpg", "FB_IMG_1784221800206.jpg", "FB_IMG_1784221811009.jpg", "FB_IMG_1784221822229.jpg", "FB_IMG_1784221826220.jpg", "FB_IMG_1784221829920.jpg", "FB_IMG_1784221833342.jpg", "FB_IMG_1784221837261.jpg", "FB_IMG_1784221840328.jpg", "FB_IMG_1784221844267.jpg", "FB_IMG_1784221853530.jpg", "FB_IMG_1784221855293.jpg", "FB_IMG_1784221869702.jpg", "FB_IMG_1784221871628.jpg", "FB_IMG_1784221872951.jpg", "FB_IMG_1784221874952.jpg", "FB_IMG_1784221877024.jpg", "FB_IMG_1784221888151.jpg", "FB_IMG_1784221903565.jpg", "FB_IMG_1784221925394.jpg", "FB_IMG_1784221927542.jpg", "FB_IMG_1784221930680.jpg", "FB_IMG_1784222380077.jpg", "FB_IMG_1784222515227.jpg", "FB_IMG_1784222519736.jpg", "FB_IMG_1784222716367.jpg", "FB_IMG_1784222722615.jpg", "FB_IMG_1784224281689.jpg", "FB_IMG_1784224288158.jpg", "FB_IMG_1784224296809.jpg", "FB_IMG_1784224299878.jpg", "FB_IMG_1784224302324.jpg", "FB_IMG_1784225094381.jpg", "FB_IMG_1784225104016.jpg", "FB_IMG_1784225118870.jpg", "FB_IMG_1784225123307.jpg", "FB_IMG_1784225128126.jpg", "FB_IMG_1784225133798.jpg", "FB_IMG_1784225138125.jpg", "FB_IMG_1784225154137.jpg", "FB_IMG_1784225854289.jpg", "FB_IMG_1784225858476.jpg", "FB_IMG_1784225872093.jpg", "FB_IMG_1784225877846.jpg", "FB_IMG_1784225879729.jpg", "FB_IMG_1784225894009.jpg", "FB_IMG_1784225895925.jpg", "FB_IMG_1784225900993.jpg", "FB_IMG_1784225908525.jpg", "FB_IMG_1784225912027.jpg", "FB_IMG_1784225916393.jpg", "FB_IMG_1784225924284.jpg", "FB_IMG_1784225926492.jpg", "FB_IMG_1784225928925.jpg", "FB_IMG_1784225930792.jpg", "FB_IMG_1784225932611.jpg", "FB_IMG_1784225934345.jpg", "FB_IMG_1784225936108.jpg", "FB_IMG_1784225937926.jpg", "FB_IMG_1784225939725.jpg", "FB_IMG_1784225959644.jpg", "FB_IMG_1784225972809.jpg", "FB_IMG_1784225979559.jpg", "FB_IMG_1784225981257.jpg", "FB_IMG_1784225982915.jpg", "FB_IMG_1784225984580.jpg", "FB_IMG_1784225986311.jpg", "FB_IMG_1784225988141.jpg", "FB_IMG_1784225990313.jpg", "FB_IMG_1784225992276.jpg", "FB_IMG_1784225998045.jpg", "FB_IMG_1784226017159.jpg", "FB_IMG_1784226018924.jpg", "FB_IMG_1784226020798.jpg", "FB_IMG_1784226030008.jpg", "FB_IMG_1784226031843.jpg", "FB_IMG_1784226033693.jpg", "FB_IMG_1784226040365.jpg", "FB_IMG_1784226049875.jpg", "FB_IMG_1784226051797.jpg", "FB_IMG_1784226053632.jpg", "FB_IMG_1784226055594.jpg", "FB_IMG_1784226070426.jpg", "FB_IMG_1784226071857.jpg", "FB_IMG_1784226073097.jpg", "FB_IMG_1784226074407.jpg", "FB_IMG_1784226075626.jpg", "FB_IMG_1784226076864.jpg", "FB_IMG_1784226080226.jpg", "FB_IMG_1784226081560.jpg", "FB_IMG_1784226082941.jpg", "FB_IMG_1784226084225.jpg", "FB_IMG_1784226085575.jpg", "FB_IMG_1784226086928.jpg", "FB_IMG_1784226088241.jpg", "FB_IMG_1784226089510.jpg", "FB_IMG_1784226090775.jpg", "FB_IMG_1784226092041.jpg", "FB_IMG_1784226093776.jpg", "FB_IMG_1784226095041.jpg", "FB_IMG_1784226096957.jpg", "FB_IMG_1784226098641.jpg", "FB_IMG_1784226100008.jpg", "FB_IMG_1784226112258.jpg", "FB_IMG_1784226197037.jpg", "FB_IMG_1784226203841.jpg", "FB_IMG_1784226212436.jpg", "FB_IMG_1784226214208.jpg", "FB_IMG_1784226215991.jpg", "FB_IMG_1784226217759.jpg", "FB_IMG_1784226219543.jpg", "FB_IMG_1784226221308.jpg", "FB_IMG_1784226223275.jpg", "FB_IMG_1784226231043.jpg", "FB_IMG_1784226232757.jpg", "FB_IMG_1784226234426.jpg", "FB_IMG_1784226236094.jpg", "FB_IMG_1784226294534.jpg", "FB_IMG_1784226296314.jpg", "FB_IMG_1784226298092.jpg", "FB_IMG_1784226299946.jpg", "FB_IMG_1784226305894.jpg", "FB_IMG_1784226308177.jpg", "FB_IMG_1784226310195.jpg", "FB_IMG_1784226315325.jpg", "FB_IMG_1784226318515.jpg", "FB_IMG_1784226323365.jpg", "FB_IMG_1784226324758.jpg", "FB_IMG_1784226326600.jpg", "FB_IMG_1784226328666.jpg", "FB_IMG_1784226339030.jpg", "FB_IMG_1784226348358.jpg", "FB_IMG_1784226349792.jpg", "FB_IMG_1784226353193.jpg", "FB_IMG_1784226354559.jpg", "FB_IMG_1784226356433.jpg", "FB_IMG_1784226407943.jpg", "FB_IMG_1784226422282.jpg", "FB_IMG_1784226428130.jpg", "FB_IMG_1784226432449.jpg", "FB_IMG_1784226437377.jpg", "FB_IMG_1784226445214.jpg", "FB_IMG_1784226446924.jpg", "FB_IMG_1784226448669.jpg", "FB_IMG_1784226450390.jpg", "FB_IMG_1784226452042.jpg", "FB_IMG_1784226462987.jpg", "FB_IMG_1784226469485.jpg", "FB_IMG_1784226472326.jpg", "FB_IMG_1784226473173.jpg", "FB_IMG_1784226474995.jpg", "FB_IMG_1784226480114.jpg", "FB_IMG_1784226486681.jpg", "FB_IMG_1784226491595.jpg", "FB_IMG_1784226493337.jpg", "FB_IMG_1784226495047.jpg", "FB_IMG_1784226497130.jpg", "FB_IMG_1784226527917.jpg", "FB_IMG_1784226534857.jpg", "FB_IMG_1784238551927.jpg", "FB_IMG_1784238562340.jpg", "FB_IMG_1784238577402.jpg", "FB_IMG_1784238586167.jpg", "FB_IMG_1784238588474.jpg", "FB_IMG_1784238591115.jpg", "FB_IMG_1784238593088.jpg", "FB_IMG_1784238594495.jpg", "FB_IMG_1784238611838.jpg", "FB_IMG_1784238614354.jpg", "FB_IMG_1784238616169.jpg", "FB_IMG_1784238618483.jpg", "FB_IMG_1784238620382.jpg", "FB_IMG_1784238622388.jpg", "FB_IMG_1784238624730.jpg", "FB_IMG_1784238626519.jpg", "FB_IMG_1784238628387.jpg", "FB_IMG_1784238630171.jpg", "FB_IMG_1784238632186.jpg", "FB_IMG_1784238638899.jpg", "FB_IMG_1784238640776.jpg", "FB_IMG_1784238643233.jpg", "FB_IMG_1784238645634.jpg", "FB_IMG_1784238646988.jpg", "FB_IMG_1784238650381.jpg", "FB_IMG_1784238651366.jpg", "FB_IMG_1784238653082.jpg", "FB_IMG_1784238655782.jpg", "FB_IMG_1784238656879.jpg", "FB_IMG_1784238658799.jpg", "FB_IMG_1784238660718.jpg", "FB_IMG_1784238666746.jpg", "FB_IMG_1784238668694.jpg", "FB_IMG_1784238670403.jpg", "FB_IMG_1784238672876.jpg", "FB_IMG_1784238674821.jpg", "FB_IMG_1784238677402.jpg", "FB_IMG_1784238678527.jpg", "FB_IMG_1784238682641.jpg", "FB_IMG_1784238684501.jpg", "FB_IMG_1784238686680.jpg", "FB_IMG_1784238689474.jpg", "FB_IMG_1784238690510.jpg", "FB_IMG_1784238692399.jpg", "FB_IMG_1784238694452.jpg", "FB_IMG_1784238701359.jpg", "FB_IMG_1784238706662.jpg", "FB_IMG_1784238708466.jpg", "FB_IMG_1784238710938.jpg", "FB_IMG_1784238712842.jpg", "FB_IMG_1784238715152.jpg", "FB_IMG_1784238717094.jpg", "FB_IMG_1784238718887.jpg", "FB_IMG_1784238720619.jpg", "FB_IMG_1784238722420.jpg", "FB_IMG_1784238724188.jpg", "FB_IMG_1784238726467.jpg", "FB_IMG_1784238728877.jpg", "FB_IMG_1784238730527.jpg", "FB_IMG_1784238733434.jpg", "FB_IMG_1784238734286.jpg", "FB_IMG_1784238736150.jpg", "FB_IMG_1784238738785.jpg", "FB_IMG_1784238741399.jpg", "FB_IMG_1784238743938.jpg", "FB_IMG_1784238745765.jpg", "FB_IMG_1784238747570.jpg", "FB_IMG_1784238749369.jpg", "FB_IMG_1784238751317.jpg", "FB_IMG_1784238754427.jpg", "FB_IMG_1784238755335.jpg", "FB_IMG_1784238757296.jpg", "FB_IMG_1784238759390.jpg", "FB_IMG_1784238761341.jpg", "FB_IMG_1784238763509.jpg", "FB_IMG_1784238764882.jpg", "FB_IMG_1784238767121.jpg", "FB_IMG_1784238768999.jpg", "FB_IMG_1784238778600.jpg", "FB_IMG_1784238779132.jpg", "FB_IMG_1784238781279.jpg", "FB_IMG_1784238804382.jpg", "FB_IMG_1784238817699.jpg", "FB_IMG_1784238819552.jpg", "FB_IMG_1784238821587.jpg", "FB_IMG_1784238823404.jpg", "FB_IMG_1784238825283.jpg", "FB_IMG_1784238827376.jpg", "FB_IMG_1784238829214.jpg", "FB_IMG_1784238830819.jpg", "FB_IMG_1784238836810.jpg", "FB_IMG_1784238851252.jpg", "FB_IMG_1784238857982.jpg", "FB_IMG_1784238874519.jpg", "FB_IMG_1784241004339.jpg", "FB_IMG_1784241009603.jpg", "FB_IMG_1784444941595.jpg", "FB_IMG_1784444943764.jpg", "FB_IMG_1784444945580.jpg", "FB_IMG_1784444947750.jpg", "FB_IMG_1784444949612.jpg", "FB_IMG_1784444951310.jpg", "FB_IMG_1784444953790.jpg", "FB_IMG_1784444955650.jpg", "FB_IMG_1784444957729.jpg", "FB_IMG_1784444960076.jpg", "FB_IMG_1784444961934.jpg", "FB_IMG_1784444963783.jpg", "FB_IMG_1784444965895.jpg", "FB_IMG_1784444967860.jpg", "FB_IMG_1784444969878.jpg", "FB_IMG_1784444971626.jpg", "FB_IMG_1784444974120.jpg", "FB_IMG_1784444976214.jpg", "FB_IMG_1784450931318.jpg", "FB_IMG_1784451323777.jpg", "FB_IMG_1784451325879.jpg", "FB_IMG_1784451327816.jpg", "FB_IMG_1784451329665.jpg", "FB_IMG_1784451331654.jpg", "FB_IMG_1784451336145.jpg", "FB_IMG_1784451338212.jpg", "FB_IMG_1784451349963.jpg", "FB_IMG_1784451352571.jpg", "FB_IMG_1784451407014.jpg", "FB_IMG_1784451409079.jpg", "FB_IMG_1784451411951.jpg", "FB_IMG_1784451414265.jpg", "FB_IMG_1784451417489.jpg", "FB_IMG_1784451419389.jpg", "FB_IMG_1784451421461.jpg", "FB_IMG_1784451423481.jpg", "FB_IMG_1784451425645.jpg", "FB_IMG_1784451427718.jpg", "FB_IMG_1784451461016.jpg", "FB_IMG_1784451463248.jpg", "FB_IMG_1784451465235.jpg", "FB_IMG_1784451467110.jpg", "FB_IMG_1784451468978.jpg", "FB_IMG_1784451471538.jpg", "FB_IMG_1784451473561.jpg", "FB_IMG_1784451475580.jpg", "FB_IMG_1784451477680.jpg", "FB_IMG_1784451479765.jpg", "FB_IMG_1784451481902.jpg", "FB_IMG_1784451483911.jpg", "FB_IMG_1784451486130.jpg", "FB_IMG_1784451488180.jpg", "FB_IMG_1784451490124.jpg", "FB_IMG_1784451492223.jpg", "FB_IMG_1784451494224.jpg", "FB_IMG_1784451496233.jpg", "FB_IMG_1784451498280.jpg", "FB_IMG_1784451500246.jpg", "FB_IMG_1784451506184.jpg", "FB_IMG_1784451509532.jpg", "FB_IMG_1784451512486.jpg", "FB_IMG_1784451812484.jpg", "FB_IMG_1784454265952.jpg", "FB_IMG_1784456845617.jpg", "FB_IMG_1784456847853.jpg", "FB_IMG_1784456852771.jpg", "FB_IMG_1784456857433.jpg", "FB_IMG_1784456863239.jpg", "FB_IMG_1784456888264.jpg", "FB_IMG_1784456895351.jpg", "FB_IMG_1784456897705.jpg", "FB_IMG_1784456910333.jpg", "FB_IMG_1784456943253.jpg", "FB_IMG_1784456945491.jpg", "FB_IMG_1784456954147.jpg", "FB_IMG_1784456956343.jpg", "FB_IMG_1784456958221.jpg", "FB_IMG_1784456961903.jpg", "FB_IMG_1784456963950.jpg", "FB_IMG_1784456965747.jpg", "FB_IMG_1784456968064.jpg", "FB_IMG_1784456969951.jpg", "FB_IMG_1784456971851.jpg", "FB_IMG_1784456974709.jpg", "FB_IMG_1784456977666.jpg", "FB_IMG_1784456980032.jpg", "FB_IMG_1784456981477.jpg", "FB_IMG_1784456988601.jpg", "FB_IMG_1784456991024.jpg", "FB_IMG_1784456993023.jpg", "FB_IMG_1784456997397.jpg", "FB_IMG_1784457001049.jpg", "FB_IMG_1784457003474.jpg", "FB_IMG_1784457005126.jpg", "FB_IMG_1784457007827.jpg", "FB_IMG_1784457009724.jpg", "FB_IMG_1784457011566.jpg", "FB_IMG_1784457013459.jpg", "FB_IMG_1784457015619.jpg", "FB_IMG_1784457017314.jpg", "FB_IMG_1784457020063.jpg", "FB_IMG_1784457021739.jpg", "FB_IMG_1784457025291.jpg", "FB_IMG_1784457026100.jpg", "FB_IMG_1784457027974.jpg", "FB_IMG_1784457032753.jpg", "FB_IMG_1784457044704.jpg", "FB_IMG_1784457046805.jpg", "FB_IMG_1784457048705.jpg", "FB_IMG_1784457050831.jpg", "FB_IMG_1784457053129.jpg", "FB_IMG_1784457057126.jpg", "FB_IMG_1784457066498.jpg", "FB_IMG_1784457072607.jpg", "FB_IMG_1784457097990.jpg", "FB_IMG_1784457104949.jpg", "FB_IMG_1784457110895.jpg", "FB_IMG_1784457114490.jpg", "FB_IMG_1784457116562.jpg", "FB_IMG_1784457118798.jpg", "FB_IMG_1784457120718.jpg", "FB_IMG_1784457122975.jpg", "FB_IMG_1784457147809.jpg", "FB_IMG_1784457149840.jpg", "FB_IMG_1784457151932.jpg", "FB_IMG_1784461785838.jpg", "FB_IMG_1784461788182.jpg", "FB_IMG_1784461789605.jpg", "FB_IMG_1784461793602.jpg", "FB_IMG_1784461795138.jpg", "FB_IMG_1784461796491.jpg", "FB_IMG_1784461798106.jpg", "FB_IMG_1784461799625.jpg", "FB_IMG_1784461801553.jpg", "FB_IMG_1784461803121.jpg", "FB_IMG_1784461805047.jpg", "FB_IMG_1784461805940.jpg", "FB_IMG_1784461807636.jpg", "FB_IMG_1784461809523.jpg", "FB_IMG_1784461818247.jpg", "FB_IMG_1784461828364.jpg", "FB_IMG_1784461833099.jpg", "FB_IMG_1784461838611.jpg", "FB_IMG_1784461841131.jpg", "FB_IMG_1784461843060.jpg", "FB_IMG_1784461845269.jpg", "FB_IMG_1784461847934.jpg", "FB_IMG_1784461851299.jpg", "FB_IMG_1784461852584.jpg", "FB_IMG_1784461854243.jpg", "FB_IMG_1784461856981.jpg", "FB_IMG_1784461859167.jpg", "FB_IMG_1784461860661.jpg", "FB_IMG_1784461862933.jpg", "FB_IMG_1784461877971.jpg", "FB_IMG_1784461879770.jpg", "FB_IMG_1784461894405.jpg", "FB_IMG_1784467296114.jpg", "FB_IMG_1784467315104.jpg", "FB_IMG_1784469985397.jpg", "FB_IMG_1784469989365.jpg", "FB_IMG_1784469993097.jpg", "FB_IMG_1784470005050.jpg", "FB_IMG_1784470006946.jpg", "FB_IMG_1784470016280.jpg", "FB_IMG_1784470018030.jpg", "FB_IMG_1784470021550.jpg", "FB_IMG_1784470023543.jpg"],
+    perPage: 30
+  };
+
+  /* Convert a GitHub "blob" URL into a raw, directly-renderable image URL */
+  function toRawUrl(base, filename){
+    var raw = base.replace("github.com", "raw.githubusercontent.com").replace("/blob/", "/");
+    return raw + encodeURIComponent(filename).replace(/%2F/g, "/");
+  }
+
+  var total = CONFIG.filenames.length;
+  var perPage = CONFIG.perPage;
+  var totalPages = Math.max(1, Math.ceil(total / perPage));
+  var currentPage = 1;
+
+  var grid = document.getElementById("grid");
+  var pager = document.getElementById("pager");
+  var statusEl = document.getElementById("status");
+  var countLabel = document.getElementById("countLabel");
+  var pageLabel = document.getElementById("pageLabel");
+  var totalPagesLabel = document.getElementById("totalPagesLabel");
+
+  countLabel.textContent = total;
+  totalPagesLabel.textContent = totalPages;
+
+  var io = null; // IntersectionObserver, rebuilt per page
+
+  function destroyCurrentPage(){
+    if(io){ io.disconnect(); io = null; }
+    // Actively drop image src/srcset before removal so decoded bitmaps are freed sooner
+    var imgs = grid.querySelectorAll("img");
+    for(var i=0;i<imgs.length;i++){
+      imgs[i].src = "";
+      imgs[i].removeAttribute("src");
+    }
+    grid.innerHTML = "";
+  }
+
+  function renderPage(pageNum){
+    pageNum = Math.min(Math.max(1, pageNum), totalPages);
+    destroyCurrentPage();
+    currentPage = pageNum;
+
+    var start = (pageNum - 1) * perPage;
+    var end = Math.min(start + perPage, total);
+    var frag = document.createDocumentFragment();
+
+    io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        if(entry.isIntersecting){
+          var img = entry.target;
+          var skel = img.parentElement.querySelector(".skel");
+          img.src = img.dataset.src;
+          img.onload = function(){
+            img.classList.add("loaded");
+            if(skel) skel.classList.add("gone");
+          };
+          io.unobserve(img);
+        }
+      });
+    }, { root: null, rootMargin: "200px 0px", threshold: 0.01 });
+
+    for(var i = start; i < end; i++){
+      var filename = CONFIG.filenames[i];
+      var url = toRawUrl(CONFIG.repoBase, filename);
+
+      var card = document.createElement("div");
+      card.className = "card";
+
+      var avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.setAttribute("role", "button");
+      avatar.setAttribute("tabindex", "0");
+      avatar.dataset.index = i;
+
+      var inner = document.createElement("div");
+      inner.className = "avatar-inner";
+
+      var skel = document.createElement("div");
+      skel.className = "skel";
+
+      var img = document.createElement("img");
+      img.dataset.src = url;
+      img.loading = "lazy";
+      img.decoding = "async";
+      img.alt = "Profile photo";
+
+      inner.appendChild(skel);
+      inner.appendChild(img);
+      avatar.appendChild(inner);
+      card.appendChild(avatar);
+      frag.appendChild(card);
+
+      io.observe(img);
+    }
+
+    grid.appendChild(frag);
+
+    grid.querySelectorAll(".avatar").forEach(function(el){
+      el.addEventListener("click", function(){
+        openLightbox(parseInt(el.dataset.index, 10));
+      });
+      el.addEventListener("keydown", function(e){
+        if(e.key === "Enter" || e.key === " "){
+          e.preventDefault();
+          openLightbox(parseInt(el.dataset.index, 10));
+        }
+      });
+    });
+
+    pageLabel.textContent = pageNum;
+    statusEl.textContent = "Showing " + (start + 1) + "–" + end + " of " + total;
+    renderPager();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function renderPager(){
+    pager.innerHTML = "";
+
+    function addBtn(label, page, opts){
+      opts = opts || {};
+      var b = document.createElement("button");
+      b.textContent = label;
+      if(opts.active) b.classList.add("active");
+      if(opts.disabled) b.disabled = true;
+      b.addEventListener("click", function(){ renderPage(page); });
+      pager.appendChild(b);
+    }
+    function addDots(){
+      var s = document.createElement("span");
+      s.className = "dots";
+      s.textContent = "…";
+      pager.appendChild(s);
+    }
+
+    addBtn("‹", currentPage - 1, { disabled: currentPage === 1 });
+
+    var windowSize = 2;
+    var pages = [];
+    pages.push(1);
+    for(var p = currentPage - windowSize; p <= currentPage + windowSize; p++){
+      if(p > 1 && p < totalPages) pages.push(p);
+    }
+    if(totalPages > 1) pages.push(totalPages);
+    pages = Array.from(new Set(pages)).sort(function(a,b){ return a-b; });
+
+    var prev = null;
+    pages.forEach(function(p){
+      if(prev !== null && p - prev > 1) addDots();
+      addBtn(String(p), p, { active: p === currentPage });
+      prev = p;
+    });
+
+    addBtn("›", currentPage + 1, { disabled: currentPage === totalPages });
+  }
+
+  /* ---------------- Lightbox (browses the FULL set, loads one image at a time) --------------- */
+  var lightbox = document.getElementById("lightbox");
+  var lbImg = document.getElementById("lbImg");
+  var lbSpinner = document.getElementById("lbSpinner");
+  var lbIndex = document.getElementById("lbIndex");
+  var lbClose = document.getElementById("lbClose");
+  var lbPrev = document.getElementById("lbPrev");
+  var lbNext = document.getElementById("lbNext");
+  var activeIndex = 0;
+
+  function openLightbox(index){
+    activeIndex = index;
+    lightbox.classList.add("open");
+    document.body.style.overflow = "hidden";
+    showLightboxImage(index);
+  }
+  function closeLightbox(){
+    lightbox.classList.remove("open");
+    document.body.style.overflow = "";
+    lbImg.classList.remove("shown");
+    lbImg.src = "";
+    lbImg.removeAttribute("src");
+  }
+  function showLightboxImage(index){
+    lbImg.classList.remove("shown");
+    lbSpinner.classList.remove("gone");
+    var filename = CONFIG.filenames[index];
+    var url = toRawUrl(CONFIG.repoBase, filename);
+    lbIndex.textContent = (index + 1) + " / " + total;
+    var loader = new Image();
+    loader.onload = function(){
+      lbImg.src = url;
+      lbSpinner.classList.add("gone");
+      lbImg.classList.add("shown");
+    };
+    loader.src = url;
+  }
+  function stepLightbox(delta){
+    activeIndex = (activeIndex + delta + total) % total;
+    showLightboxImage(activeIndex);
+    // keep the underlying page grid in sync so pagination reflects current position
+    var targetPage = Math.floor(activeIndex / perPage) + 1;
+    if(targetPage !== currentPage) renderPage(targetPage);
+  }
+
+  lbClose.addEventListener("click", closeLightbox);
+  lbPrev.addEventListener("click", function(){ stepLightbox(-1); });
+  lbNext.addEventListener("click", function(){ stepLightbox(1); });
+  lightbox.addEventListener("click", function(e){
+    if(e.target === lightbox) closeLightbox();
+  });
+  document.addEventListener("keydown", function(e){
+    if(!lightbox.classList.contains("open")) return;
+    if(e.key === "Escape") closeLightbox();
+    if(e.key === "ArrowLeft") stepLightbox(-1);
+    if(e.key === "ArrowRight") stepLightbox(1);
+  });
+
+  // swipe support
+  var touchStartX = null;
+  lightbox.addEventListener("touchstart", function(e){
+    touchStartX = e.touches[0].clientX;
+  }, { passive: true });
+  lightbox.addEventListener("touchend", function(e){
+    if(touchStartX === null) return;
+    var dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 45){
+      if(dx < 0) stepLightbox(1); else stepLightbox(-1);
+    }
+    touchStartX = null;
+  }, { passive: true });
+
+  renderPage(1);
+})();
+</script>
+</body>
+</html>
